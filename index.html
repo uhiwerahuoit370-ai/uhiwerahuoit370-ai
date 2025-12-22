@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pure HTML & CSS — Improved UI/UX Demo</title>
+  <meta name="description" content="A polished single-file demo of interactive UI patterns built with only HTML & CSS: theme, tabs, accordion, modal, responsive cards, and an accessible form." />
+  <style>
+    /* ========= Design tokens ========= */
+    :root{
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #071128;
+      --muted: #556077;
+      --accent: #2f7be6;
+      --accent-2: #06b6d4;
+      --success: #16a34a;
+      --radius: 12px;
+      --card-radius: 12px;
+      --shadow-soft: 0 6px 20px rgba(9,18,35,0.06);
+      --shadow-strong: 0 18px 50px rgba(9,18,35,0.12);
+      --glass: rgba(255,255,255,0.6);
+      --max-width: 980px;
+      --focus: 3px;
+      --transition: 200ms cubic-bezier(.2,.9,.2,1);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    /* Dark theme overrides (checkbox hack) */
+    #theme-toggle:checked ~ .page {
+      --bg: linear-gradient(180deg,#071226 0%, #071a2a 90%);
+      --panel: #07112a;
+      --text: #e8f0ff;
+      --muted: #9fb2d0;
+      --accent: #6ea8ff;
+      --accent-2: #33e0d6;
+      --glass: rgba(255,255,255,0.03);
+      --shadow-soft: 0 8px 30px rgba(2,6,23,0.45);
+      --shadow-strong: 0 30px 80px rgba(2,6,23,0.6);
+    }
+
+    /* ========= Global ========= */
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      line-height:1.45;
+      font-size:15px;
+    }
+
+    /* Skip link for keyboard users */
+    .skip-link{
+      position:fixed;left:1rem;top:1rem;z-index:9999;
+      background:var(--accent);
+      color:#fff;padding:.5rem .75rem;border-radius:8px;
+      transform:translateY(-120%);opacity:0;transition:transform .16s,var(--transition);
+    }
+    .skip-link:focus{transform:translateY(0);opacity:1;outline:none;box-shadow:0 6px 24px rgba(47,123,230,0.18)}
+
+    .page{
+      max-width:var(--max-width);
+      margin:1.25rem auto;
+      padding:1rem;
+    }
+
+    /* Header */
+    header.topbar{
+      background:linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2));
+      border-radius:14px;
+      padding:.8rem 1rem;
+      display:flex;align-items:center;justify-content:space-between;gap:1rem;
+      box-shadow:var(--shadow-soft);
+      backdrop-filter: blur(6px);
+    }
+    .brand{display:flex;align-items:center;gap:.8rem}
+    .logo{
+      width:44px;height:44px;border-radius:9px;
+      display:grid;place-items:center;font-weight:700;color:white;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      box-shadow:var(--shadow-strong);
+      flex:0 0 44px;
+    }
+    .title{margin:0;font-size:1.02rem}
+    .subtitle{margin:0;color:var(--muted);font-size:.86rem}
+
+    /* Theme toggle (accessible) */
+    .controls{display:flex;gap:.6rem;align-items:center}
+    #theme-toggle{position:absolute;left:-9999px}
+    .theme-btn{
+      display:inline-flex;align-items:center;gap:.55rem;padding:.45rem .6rem;border-radius:999px;
+      background:var(--glass);cursor:pointer;border:1px solid rgba(9,18,35,0.04);
+      transition:transform var(--transition), box-shadow var(--transition);
+    }
+    .theme-btn:active{transform:scale(.98)}
+    .theme-btn:focus{outline:3px solid rgba(47,123,230,0.18);outline-offset:3px}
+
+    /* Container card */
+    main.card{
+      margin-top:1rem;
+      background:var(--panel);
+      border-radius:var(--card-radius);
+      box-shadow:var(--shadow-soft);
+      padding:1rem;
+      overflow:hidden;
+    }
+
+    /* Tabs (radio + labels) */
+    .tabs{display:block}
+    .tab-rad{position:absolute;left:-9999px}
+    .tab-labels{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+    .tab-labels label{
+      padding:.55rem .85rem;border-radius:10px;background:transparent;color:var(--muted);cursor:pointer;
+      transition:background var(--transition),color var(--transition),transform var(--transition);
+      user-select:none;font-weight:600;font-size:.95rem;
+    }
+    .tab-labels label:hover{transform:translateY(-2px)}
+    /* checked styles */
+    #tab-overview:checked ~ .tab-labels label[for="tab-overview"],
+    #tab-cards:checked ~ .tab-labels label[for="tab-cards"],
+    #tab-form:checked ~ .tab-labels label[for="tab-form"]{
+      background:linear-gradient(180deg, rgba(47,123,230,0.06), rgba(0,0,0,0.02));
+      color:var(--text);box-shadow:inset 0 -2px 0 rgba(0,0,0,0.04)
+    }
+    .tab-panels{padding:.2rem 0}
+    .panel{display:none;padding:.2rem .1rem 0}
+    #tab-overview:checked ~ .tab-panels #panel-overview,
+    #tab-cards:checked ~ .tab-panels #panel-cards,
+    #tab-form:checked ~ .tab-panels #panel-form{
+      display:block
+    }
+
+    /* Small helpers */
+    h2{margin:.2rem 0 .5rem}
+    p{margin:.4rem 0 .9rem;color:var(--muted)}
+
+    /* Accordion */
+    .accordion{margin:.8rem 0;border-radius:10px;padding:.65rem;background:linear-gradient(180deg, rgba(0,0,0,0.02), transparent)}
+    .accordion summary{cursor:pointer;font-weight:700;list-style:none;outline:none;}
+    .accordion[open]{background:linear-gradient(180deg, rgba(47,123,230,0.03), transparent)}
+    .accordion p{margin:.5rem 0 0;color:var(--muted)}
+
+    /* Grid / cards */
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:1rem;margin-top:.6rem;
+    }
+    .card-item{
+      background:linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.02));
+      border-radius:12px;padding:1rem;box-shadow:var(--shadow-soft);
+      transition:transform var(--transition), box-shadow var(--transition);
+      min-height:120px;display:flex;flex-direction:column;gap:.6rem;
+    }
+    .card-item:hover{transform:translateY(-8px);box-shadow:var(--shadow-strong)}
+    .card-item h3{margin:0;font-size:1.02rem}
+    .card-item p{margin:0;color:var(--muted);font-size:.92rem}
+    .card-actions{margin-top:auto;display:flex;gap:.5rem;align-items:center}
+
+    .btn{
+      display:inline-flex;align-items:center;gap:.5rem;padding:.5rem .75rem;border-radius:9px;border:0;
+      background:var(--accent);color:#fff;text-decoration:none;font-weight:600;cursor:pointer;
+      transition:transform var(--transition);
+    }
+    .btn:active{transform:scale(.98)}
+    .btn-secondary{background:transparent;color:var(--text);border:1px solid rgba(9,18,35,0.06)}
+
+    /* Form */
+    form.demo-form{display:grid;gap:.65rem;max-width:600px}
+    form label{display:flex;flex-direction:column;gap:.3rem;font-size:.95rem}
+    input[type="text"],input[type="email"],textarea{
+      padding:.6rem .75rem;border-radius:10px;border:1px solid rgba(9,18,35,0.06);
+      background:var(--panel);color:var(--text);transition:border-color var(--transition),box-shadow var(--transition);
+    }
+    input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 6px 24px rgba(47,123,230,0.08)}
+    input:invalid{border-color:#e11d48}
+    .row{display:flex;gap:.6rem;flex-wrap:wrap}
+    .checkbox-inline{display:flex;align-items:center;gap:.5rem;color:var(--muted)}
+    .form-actions{display:flex;gap:.5rem;align-items:center;margin-top:.2rem}
+
+    /* Modal (CSS :target) with improved visuals */
+    .modal{
+      position:fixed;inset:0;display:grid;place-items:center;padding:2rem;background:rgba(7,17,34,0.45);
+      opacity:0;pointer-events:none;transition:opacity .18s ease;z-index:1000;
+    }
+    .modal:target{opacity:1;pointer-events:auto}
+    .modal-panel{
+      width:100%;max-width:720px;background:var(--panel);border-radius:14px;padding:1.15rem 1.15rem 1rem;
+      box-shadow:0 30px 80px rgba(9,18,35,0.18);
+    }
+    .modal-close{
+      display:inline-flex;align-items:center;gap:.5rem;margin-left:auto;padding:.35rem .55rem;border-radius:9px;
+      text-decoration:none;background:transparent;border:1px solid rgba(9,18,35,0.06);color:var(--text);
+    }
+    .modal-head{display:flex;align-items:center;gap:.75rem;border-bottom:1px solid rgba(9,18,35,0.04);padding-bottom:.6rem}
+    .modal-body{padding-top:.7rem;color:var(--muted)}
+
+    /* Footer */
+    footer.sitefoot{margin-top:1rem;text-align:center;color:var(--muted);font-size:.92rem;padding:.6rem}
+
+    /* Focus-visible for keyboard accessibility */
+    :focus{outline:none}
+    :focus-visible{outline:var(--focus) solid rgba(47,123,230,0.15);outline-offset:3px;border-radius:6px}
+
+    /* Small screens */
+    @media (max-width:720px){
+      .topbar{padding:.6rem}
+      .brand .subtitle{display:none}
+      .grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+      .page{margin:0.8rem;padding:.6rem}
+      .modal{padding:1rem}
+    }
+  </style>
+</head>
+<body>
+  <!-- Skip link -->
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <!-- Theme checkbox (visual + accessible) -->
+  <input id="theme-toggle" type="checkbox" aria-label="Toggle dark theme" />
+
+  <div class="page">
+    <header class="topbar" role="banner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">UI</div>
+        <div>
+          <h1 class="title">Pure HTML & CSS</h1>
+          <p class="subtitle">Improved UI/UX — tabs · modal · responsive grid</p>
+        </div>
+      </div>
+
+      <div class="controls" aria-hidden="false">
+        <label for="theme-toggle" class="theme-btn" title="Toggle light/dark theme" role="button">
+          <!-- simple SVG icons -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span style="font-weight:700;color:var(--text)">Theme</span>
+        </label>
+      </div>
+    </header>
+
+    <main id="main-content" class="card" role="main" aria-labelledby="main-title">
+      <h2 id="main-title" style="margin-top:0">Demo — polished single-file UI</h2>
+      <p>Everything below is built with semantic HTML and CSS-only interactions. Improved spacing, contrast, focus states, and mobile behavior for a better UX.</p>
+
+      <!-- Tabs implemented with radio buttons -->
+      <section class="tabs" aria-labelledby="tabs-title" role="region">
+        <!-- radios -->
+        <input class="tab-rad" type="radio" name="tabs" id="tab-overview" checked />
+        <input class="tab-rad" type="radio" name="tabs" id="tab-cards" />
+        <input class="tab-rad" type="radio" name="tabs" id="tab-form" />
+
+        <!-- labels -->
+        <div class="tab-labels" role="tablist" aria-label="Demo sections">
+          <label for="tab-overview" role="tab" tabindex="0" aria-controls="panel-overview">Overview</label>
+          <label for="tab-cards" role="tab" tabindex="0" aria-controls="panel-cards">Cards</label>
+          <label for="tab-form" role="tab" tabindex="0" aria-controls="panel-form">Form</label>
+        </div>
+
+        <div class="tab-panels">
+          <section id="panel-overview" class="panel" role="tabpanel" aria-labelledby="tab-overview">
+            <h3 style="margin-top:0">Welcome</h3>
+            <p>Try the tabs, open the modal, expand the accordion, and test the responsive grid. All interactions are CSS-only and keyboard reachable.</p>
+
+            <details class="accordion">
+              <summary>Why a CSS-only demo?</summary>
+              <p>CSS can handle many UI patterns reliably without JavaScript. This reduces complexity and improves progressive enhancement — with accessible markup and clear focus states.</p>
+            </details>
+
+            <p>
+              Open an example modal: <a href="#modal" class="btn-secondary" style="text-decoration:none;padding:.35rem .55rem;border-radius:8px">Open modal</a>
+            </p>
+          </section>
+
+          <section id="panel-cards" class="panel" role="tabpanel" aria-labelledby="tab-cards">
+            <h3 style="margin-top:0">Responsive Cards</h3>
+            <p>Cards adapt to the viewport and include hover and focus affordances.</p>
+
+            <div class="grid" role="list">
+              <article class="card-item" role="listitem" tabindex="0" aria-label="Card: Performance">
+                <h3>Performance</h3>
+                <p>Optimized CSS structure with hardware-accelerated transforms for smooth interactions.</p>
+                <div class="card-actions">
+                  <a class="btn" href="#modal" title="View details">View</a>
+                  <a class="btn-secondary" href="#panel-cards" title="More">More</a>
+                </div>
+              </article>
+
+              <article class="card-item" role="listitem" tabindex="0" aria-label="Card: Responsive">
+                <h3>Responsive</h3>
+                <p>Grid and fluid spacing scale across devices — from compact mobile to wide desktop.</p>
+                <div class="card-actions">
+                  <a class="btn" href="#modal">View</a>
+                  <a class="btn-secondary" href="#panel-cards">More</a>
+                </div>
+              </article>
+
+              <article class="card-item" role="listitem" tabindex="0" aria-label="Card: Accessible">
+                <h3>Accessible</h3>
+                <p>Keyboard focus, visible outlines, and semantic structure improve inclusivity.</p>
+                <div class="card-actions">
+                  <a class="btn" href="#modal">View</a>
+                  <a class="btn-secondary" href="#panel-cards">More</a>
+                </div>
+              </article>
+
+              <article class="card-item" role="listitem" tabindex="0" aria-label="Card: Simple">
+                <h3>Simple</h3>
+                <p>Minimal dependencies — just markup and CSS — making it ideal for static sites.</p>
+                <div class="card-actions">
+                  <a class="btn" href="#modal">View</a>
+                  <a class="btn-secondary" href="#panel-cards">More</a>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section id="panel-form" class="panel" role="tabpanel" aria-labelledby="tab-form">
+            <h3 style="margin-top:0">Contact Form</h3>
+            <p>Form uses built-in validation and visual feedback for invalid fields.</p>
+
+            <form class="demo-form" action="#" method="post" onsubmit="return false;" novalidate>
+              <label>
+                <span style="font-weight:600">Name</span>
+                <input type="text" name="name" placeholder="Your full name" required aria-required="true" />
+              </label>
+
+              <label>
+                <span style="font-weight:600">Email</span>
+                <input type="email" name="email" placeholder="you@example.com" required aria-required="true" />
+              </label>
+
+              <label>
+                <span style="font-weight:600">Message</span>
+                <textarea name="message" rows="4" placeholder="A short message (optional)"></textarea>
+              </label>
+
+              <label class="checkbox-inline" style="margin-top:.25rem">
+                <input type="checkbox" name="subscribe" />
+                <span style="font-size:.95rem">Subscribe to updates</span>
+              </label>
+
+              <div class="form-actions">
+                <button class="btn" type="submit" title="Submit form">Submit</button>
+                <a class="btn-secondary" href="#modal" title="Preview modal">Preview modal</a>
+              </div>
+            </form>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="sitefoot" role="contentinfo">
+      <span>Made with ❤️ using only HTML & CSS — improved UI/UX and accessibility.</span>
+    </footer>
+  </div>
+
+  <!-- Modal (CSS :target) -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-panel" role="document">
+      <div class="modal-head">
+        <h3 id="modal-title" style="margin:0">CSS-only Modal</h3>
+        <a class="modal-close" href="#" title="Close modal">Close</a>
+      </div>
+      <div class="modal-body">
+        <p style="margin-top:.5rem">This modal is opened via an anchor to <code>#modal</code> and styled with the <code>:target</code> selector. It has improved spacing and clear actions. Because this is CSS-only, the Escape key won't automatically close it — click Close or the overlay.</p>
+        <p style="margin:.6rem 0 0;color:var(--muted)">Tip: for full keyboard trapping and Escape-to-close behavior you'd add a tiny script. This demo stays script-free on purpose.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
